@@ -167,13 +167,7 @@ RCT_EXPORT_METHOD(startUpload:(NSDictionary *)options resolve:(RCTPromiseResolve
             [request setTimeoutInterval:[options[@"requestTimeoutInterval"] intValue]];
         }
 
-        if (options[@"timeoutIntervalForResource"]) {
-            _urlSession.configuration.timeoutIntervalForResource = [options[@"timeoutIntervalForResource"] intValue];
-        }
-
-        if (options[@"timeoutIntervalForRequest"]) {
-            _urlSession.configuration.timeoutIntervalForRequest = [options[@"timeoutIntervalForRequest"] intValue];
-        }
+        _urlSession = [self urlSession: appGroup options:options];
 
         [headers enumerateKeysAndObjectsUsingBlock:^(id  _Nonnull key, id  _Nonnull val, BOOL * _Nonnull stop) {
             if ([val respondsToSelector:@selector(stringValue)]) {
@@ -210,14 +204,14 @@ RCT_EXPORT_METHOD(startUpload:(NSDictionary *)options resolve:(RCTPromiseResolve
             NSData *httpBody = [self createBodyWithBoundary:uuidStr path:fileURI parameters: parameters fieldName:fieldName];
             [request setHTTPBody: httpBody];
 
-            uploadTask = [[self urlSession: appGroup] uploadTaskWithStreamedRequest:request];
+            uploadTask = [_urlSession uploadTaskWithStreamedRequest:request];
         } else {
             if (parameters.count > 0) {
                 reject(@"RN Uploader", @"Parameters supported only in multipart type", nil);
                 return;
             }
 
-            uploadTask = [[self urlSession: appGroup] uploadTaskWithRequest:request fromFile:[NSURL URLWithString: fileURI]];
+            uploadTask = [_urlSession uploadTaskWithRequest:request fromFile:[NSURL URLWithString: fileURI]];
         }
 
         uploadTask.taskDescription = customUploadId ? customUploadId : [NSString stringWithFormat:@"%i", thisUploadId];
@@ -279,12 +273,21 @@ RCT_EXPORT_METHOD(cancelUpload: (NSString *)cancelUploadId resolve:(RCTPromiseRe
     return httpBody;
 }
 
-- (NSURLSession *)urlSession: (NSString *) groupId {
+- (NSURLSession *)urlSession: (NSString *)groupId options:(NSDictionary *)options {
     if (_urlSession == nil) {
         NSURLSessionConfiguration *sessionConfiguration = [NSURLSessionConfiguration backgroundSessionConfigurationWithIdentifier:BACKGROUND_SESSION_ID];
         if (groupId != nil && ![groupId isEqualToString:@""]) {
             sessionConfiguration.sharedContainerIdentifier = groupId;
         }
+
+        if (options[@"timeoutIntervalForResource"]) {
+            sessionConfiguration.timeoutIntervalForResource = [options[@"timeoutIntervalForResource"] intValue];
+        }
+
+        if (options[@"timeoutIntervalForRequest"]) {
+            sessionConfiguration.timeoutIntervalForRequest = [options[@"timeoutIntervalForRequest"] intValue];
+        }
+
         _urlSession = [NSURLSession sessionWithConfiguration:sessionConfiguration delegate:self delegateQueue:nil];
     }
 
