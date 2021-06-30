@@ -317,7 +317,7 @@ Why should I use this file uploader instead of others that I've Googled like [re
 
 # Contributing
 
-See [CONTRIBUTING.md](./CONTRIBUTING.md).
+See [CONTRIBUTING.md](https://github.com/Vydia/react-native-background-upload/CONTRIBUTING.md).
 
 # Common Issues
 

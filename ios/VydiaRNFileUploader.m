@@ -55,10 +55,7 @@ NSURLSession *_urlSession = nil;
 RCT_EXPORT_METHOD(getFileInfo:(NSString *)path resolve:(RCTPromiseResolveBlock)resolve reject:(RCTPromiseRejectBlock)reject)
 {
     @try {
-        // Escape non latin characters in filename
-        NSString *escapedPath = [path stringByAddingPercentEncodingWithAllowedCharacters: NSCharacterSet.URLQueryAllowedCharacterSet];
-       
-        NSURL *fileUri = [NSURL URLWithString:escapedPath];
+        NSURL *fileUri = [NSURL URLWithString: path];
         NSString *pathWithoutProtocol = [fileUri path];
         NSString *name = [fileUri lastPathComponent];
         NSString *extension = [name pathExtension];
@@ -205,8 +202,7 @@ RCT_EXPORT_METHOD(startUpload:(NSDictionary *)options resolve:(RCTPromiseResolve
             [request setValue:[NSString stringWithFormat:@"multipart/form-data; boundary=%@", uuidStr] forHTTPHeaderField:@"Content-Type"];
 
             NSData *httpBody = [self createBodyWithBoundary:uuidStr path:fileURI parameters: parameters fieldName:fieldName];
-            [request setHTTPBodyStream: [NSInputStream inputStreamWithData:httpBody]];
-            [request setValue:[NSString stringWithFormat:@"%zd", httpBody.length] forHTTPHeaderField:@"Content-Length"];
+            [request setHTTPBody: httpBody];
 
             uploadTask = [_urlSession uploadTaskWithStreamedRequest:request];
         } else {
@@ -252,19 +248,11 @@ RCT_EXPORT_METHOD(cancelUpload: (NSString *)cancelUploadId resolve:(RCTPromiseRe
 
     NSMutableData *httpBody = [NSMutableData data];
 
-    // Escape non latin characters in filename
-    NSString *escapedPath = [path stringByAddingPercentEncodingWithAllowedCharacters: NSCharacterSet.URLQueryAllowedCharacterSet];
-
     // resolve path
-    NSURL *fileUri = [NSURL URLWithString: escapedPath];
-    
-    NSError* error = nil;
-    NSData *data = [NSData dataWithContentsOfURL:fileUri options:NSDataReadingMappedAlways error: &error];
+    NSURL *fileUri = [NSURL URLWithString: path];
+    NSString *pathWithoutProtocol = [fileUri path];
 
-    if (data == nil) {
-        NSLog(@"Failed to read file %@", error);
-    }
-
+    NSData *data = [[NSFileManager defaultManager] contentsAtPath:pathWithoutProtocol];
     NSString *filename  = [path lastPathComponent];
     NSString *mimetype  = [self guessMIMETypeFromFileName:path];
 
@@ -367,17 +355,6 @@ totalBytesExpectedToSend:(int64_t)totalBytesExpectedToSend {
         _responsesData[@(dataTask.taskIdentifier)] = responseData;
     } else {
         [responseData appendData:data];
-    }
-}
-
-- (void)URLSession:(NSURLSession *)session
-              task:(NSURLSessionTask *)task
- needNewBodyStream:(void (^)(NSInputStream *bodyStream))completionHandler {
-
-    NSInputStream *inputStream = task.originalRequest.HTTPBodyStream;
-
-    if (completionHandler) {
-        completionHandler(inputStream);
     }
 }
 
